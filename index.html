@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Photo Album</title>
+    <style>
+        :root {
+            --primary-bg: #2d3748;
+            --button-bg: #4a5568;
+            --button-hover: #718096;
+            --button-disabled: #a0aec0;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e0e7ff, #c3dafe);
+        }
+        #welcome-container, #pin-container {
+            text-align: center;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, opacity 0.5s ease;
+            width: 90%;
+            max-width: 400px;
+        }
+        #welcome-container {
+            display: none;
+            opacity: 0;
+            animation: fadeIn 1s forwards;
+        }
+        #pin-container {
+            display: block;
+        }
+        #welcome-container:hover, #pin-container:hover {
+            transform: translateY(-5px);
+        }
+        #album-container {
+            display: none;
+            width: 90%;
+            max-width: 1200px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        #album-content {
+            display: flex;
+            height: 80vh;
+            max-height: 600px;
+        }
+        #image-panel {
+            flex: 1;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f5f5f5;
+            position: relative;
+        }
+        #image-panel img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transition: transform 0.5s ease;
+        }
+        #image-panel img:hover {
+            transform: scale(1.1);
+        }
+        #image-panel img.slide-left {
+            animation: slideLeft 0.5s forwards;
+        }
+        #image-panel img.slide-right {
+            animation: slideRight 0.5s forwards;
+        }
+        @keyframes slideLeft {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        @keyframes slideRight {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        #description-panel {
+            flex: 1;
+            padding: 1.5rem;
+            background: #fafafa;
+            overflow-y: auto;
+            font-size: 2.0rem;
+            line-height: 1.6;
+        }
+        #description-panel h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 2.2rem;
+        }
+        #navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--primary-bg);
+            color: white;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        #navigation button {
+            padding: 0.75rem 1.5rem;
+            background: var(--button-bg);
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+            font-size: 1rem;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        #navigation button:hover:not(:disabled) {
+            background: var(--button-hover);
+        }
+        #navigation button:disabled {
+            background: var(--button-disabled);
+            cursor: not-allowed;
+        }
+        #progress {
+            font-size: 1rem;
+        }
+        #add-photo-form {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: #fafafa;
+            border-radius: 8px;
+        }
+        #add-photo-form input, #add-photo-form textarea {
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 300px;
+        }
+        #add-photo-form button {
+            padding: 0.5rem 1rem;
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        #add-photo-form button:hover {
+            background: var(--button-hover);
+        }
+        #heic-note, #drive-note {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+            text-align: left;
+        }
+        #pin-input, #new-pin-input {
+            padding: 0.75rem;
+            font-size: 1rem;
+            margin: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 70%;
+            max-width: 150px;
+        }
+        #welcome-container button, #submit-pin, #change-pin-btn, #submit-new-pin, #cancel-new-pin {
+            padding: 0.75rem 1.5rem;
+            background: var(--primary-bg);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            font-size: 1rem;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        #welcome-container button:hover, #submit-pin:hover, #change-pin-btn:hover, #submit-new-pin:hover, #cancel-new-pin:hover {
+            background: var(--button-hover);
+        }
+        #error-message, #pin-change-message, #add-photo-error {
+            color: red;
+            margin-top: 0.5rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+        #pin-change-container {
+            display: none;
+            margin-top: 1rem;
+        }
+        #audio-controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        #audio-controls button {
+            padding: 0.5rem 1rem;
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            min-width: 44px;
+            min-height: 44px;
+        }
+        #audio-controls button:hover {
+            background: var(--button-hover);
+        }
+        #volume-slider {
+            width: 80px;
+        }
+        #loading-spinner {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-bg);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @media (max-width: 768px) {
+            #album-content {
+                flex-direction: column;
+                height: auto;
+                max-height: none;
+            }
+            #image-panel, #description-panel {
+                flex: none;
+                width: 100%;
+                height: 50vh;
+                max-height: 400px;
+            }
+            #description-panel {
+                font-size: 0.9rem;
+            }
+            #description-panel h2 {
+                font-size: 1.2rem;
+            }
+            #navigation {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            #navigation button, #progress {
+                font-size: 0.9rem;
+            }
+            #audio-controls {
+                position: static;
+                justify-content: center;
+                padding: 0.5rem;
+            }
+            #pin-container, #welcome-container {
+                padding: 1.5rem;
+            }
+            #add-photo-form {
+                width: 100%;
+            }
+        }
+        @media (max-width: 480px) {
+            #pin-input, #new-pin-input {
+                width: 80%;
+            }
+            #navigation button {
+                padding: 0.5rem 1rem;
+            }
+            #album-container {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="welcome-container">
+        <h2 id="welcome-title"></h2>
+        <p id="welcome-message"></p>
+        <button id="continue-btn">Continue</button>
+    </div>
+    <div id="pin-container">
+        <h2>Enter PIN</h2>
+        <p>Remember the first day we had a conversation.</p>
+        <input type="password" id="pin-input" placeholder="Enter 4-digit PIN">
+        <button id="submit-pin">Submit</button>
+        <div id="error-message">Incorrect PIN. Try again.</div>
+        <div id="pin-change-container">
+            <h3>Change PIN</h3>
+            <input type="password" id="new-pin-input" placeholder="New 4-digit PIN">
+            <button id="submit-new-pin">Save</button>
+            <button id="cancel-new-pin">Cancel</button>
+            <div id="pin-change-message">PIN must be 4 digits.</div>
+        </div>
+    </div>
+    <div id="album-container">
+        <div id="loading-spinner"></div>
+        <div id="audio-controls">
+            <button id="toggle-audio">▶</button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
+        </div>
+        <div id="album-content">
+            <div id="image-panel">
+                <img id="current-image" src="" alt="Photo">
+            </div>
+            <div id="description-panel">
+                <h2 id="image-title"></h2>
+                <p id="image-description"></p>
+            </div>
+        </div>
+        <div id="navigation">
+            <button id="prev-btn">⬅</button>
+            <span id="progress">1 / 1</span>
+            <button id="next-btn">➡</button>
+            <button id="change-pin-btn">Change PIN</button>
+            <button id="add-photo-btn">Add Photo</button>
+            <div id="add-photo-form">
+                <input type="text" id="photo-src" placeholder="Google Drive direct URL or file name">
+                <p id="heic-note">HEIC images work on Safari/iOS. Use JPEG/PNG for all browsers.</p>
+                <p id="drive-note">For Google Drive, use: https://drive.google.com/uc?export=view&id=FILE_ID</p>
+                <input type="text" id="photo-title" placeholder="Photo Title">
+                <textarea id="photo-description" placeholder="Photo Description"></textarea>
+                <button id="submit-photo">Add</button>
+                <button id="cancel-photo">Cancel</button>
+                <div id="add-photo-error">Please fill all fields.</div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="background-audio" loop>
+        <source src="I-Wont-Give-Up-(Acoustic).mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        const welcomeContainer = document.getElementById('welcome-container');
+        const welcomeTitle = document.getElementById('welcome-title');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const continueBtn = document.getElementById('continue-btn');
+        const pinContainer = document.getElementById('pin-container');
+        const albumContainer = document.getElementById('album-container');
+        const pinInput = document.getElementById('pin-input');
+        const submitPin = document.getElementById('submit-pin');
+        const errorMessage = document.getElementById('error-message');
+        const pinChangeContainer = document.getElementById('pin-change-container');
+        const newPinInput = document.getElementById('new-pin-input');
+        const submitNewPin = document.getElementById('submit-new-pin');
+        const cancelNewPin = document.getElementById('cancel-new-pin');
+        const pinChangeMessage = document.getElementById('pin-change-message');
+        const changePinBtn = document.getElementById('change-pin-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const currentImage = document.getElementById('current-image');
+        const imageTitle = document.getElementById('image-title');
+        const imageDescription = document.getElementById('image-description');
+        const audio = document.getElementById('background-audio');
+        const toggleAudio = document.getElementById('toggle-audio');
+        const volumeSlider = document.getElementById('volume-slider');
+        const progress = document.getElementById('progress');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const addPhotoBtn = document.getElementById('add-photo-btn');
+        const addPhotoForm = document.getElementById('add-photo-form');
+        const photoSrc = document.getElementById('photo-src');
+        const photoTitle = document.getElementById('photo-title');
+        const photoDescription = document.getElementById('photo-description');
+        const submitPhoto = document.getElementById('submit-photo');
+        const cancelPhoto = document.getElementById('cancel-photo');
+        const addPhotoError = document.getElementById('add-photo-error');
+
+        let currentIndex = 0;
+        let photos = [];
+        let isAudioPlaying = false;
+        let lastDirection = 'right'; // Track navigation direction for slide animation
+
+        // Embedded photo data (replace FILE_ID with your Google Drive file IDs)
+        const defaultPhotos = [
+            {
+                src: '4.jpg',
+                title: 'Nambalan w/ Your Pamangkin',
+                description: 'Ito yung time na kabadong kabado ako kasi first time ko makabonding si pamangkin mo. Shet, nalegal sa pamangkin. I was so happy and overwhelmed since family member mo yun and his thoughts matters. Thankfully, I went well.'
+            },
+            {
+                src: '3.jpg',
+                title: 'Nambalan w/ Your Pamangkin',
+                description: 'Kandong-kandong kita jan eh. I was really happy that time as in. If only you knew how I wished na we would have a lot of moments like that together. I cherish that moment a lot.'
+            },
+            {
+                src: '1.jpg',
+                title: 'Kkopi Pool',
+                description: 'Ang peacful nito. If I remember correctly, nag hanap tayo nito ng mga places na pwede nating pagliguan and we ended up going sa Bobon. Hindi naman tayo nagsisi kasi nasolo natin yung for almost maghapon. It was like we rented out the place'
+            },
+            {
+                src: '5.jpg',
+                title: 'Bantay Bato Mini Trecking',
+                description: 'Pagod na pagod tayo nito eh. Ganda ng view that time. Sobrang peaceful and sobrang calming.'
+            },
+            {
+                src: '8.jpg',
+                title: 'Jollibee Moments',
+                description: 'Mga foodies. I really love it when we eat outside though I also feel sorry if wala akong mai-ambag. Someday, I will be the one naman to pay in every meals and gala that we plan to go.'
+            },
+            {
+                src: '11.jpg',
+                title: 'Greenwich Moments',
+                description: 'We really are foodies. I love that you spoil me too much with foods tapos sasabihan akong mataba. Aray ko'
+            },
+            {
+                src: '20.jpg',
+                title: 'Cafe Paste Moments',
+                description: 'Fave place nyo ni ano to pero who cares diba? Ang sarap kaya mag unli HAHAHAHAHAHA'
+            },
+            {
+                src: '24.jpg',
+                title: 'Samgy Moments',
+                description: 'Monthsary natin to eh. You really look so stunning sa suot mo that time. First time kitang makitang mag suot ng ganun. Sobrang bagay mo bebi. Ang Hot mo tingnan.'
+            },
+            {
+                src: '26.jpg',
+                title: 'Hermosa Moments',
+                description: 'Continuation to nung sa samgy. Inis na inis ka sa akin kasi wala akong energy HAHAHAHA I was really worried and conscious about sa pants ko kaya parang wala akong energy huhu.'
+            },
+            {
+                src: '29.jpg',
+                title: 'Maple Leaf Moments',
+                description: 'Casual hangout with you. Hindi ka nag enjoy sa matcha nila kasi hindi masarap. Masyadong creamy HAHAHAHAHA'
+            },
+            {
+                src: '21.jpg',
+                title: 'Coffee Cherry Moments',
+                description: 'We tried kasi gusto mong masubukan kahit na inis na inis ka na sa akin that time kasi sobrang tagal ko. I am really sorry kasi nag hintay ka ng sobrang tagal that time bebi.'
+            },
+            {
+                src: '30.jpg',
+                title: 'Burger & Beans Moments',
+                description: 'Sa ctc to eh kasi nag burger tayo. Cutesy Cutesy'
+            },
+            {
+                src: '12.jpg',
+                title: '',
+                description: 'Pero alam mo ba?'
+            },
+            {
+                src: '13.jpg',
+                title: '',
+                description: 'I am genuinely happy na dumating ka sa buhay ko'
+            },
+            {
+                src: '7.jpg',
+                title: '',
+                description: 'Alam ko minsan nag aaway tayo or hindi nagkakaintindihan'
+            },
+            {
+                src: '2.jpg',
+                title: '',
+                description: 'May mga times na sa sobrang frustrated natin, may nasasabi or nagagawa tayong hindi naman natin talaga gustong sabihin/gawin'
+            },
+            {
+                src: '16.jpg',
+                title: '',
+                description: 'May mga busy times especially sa akin na minsan eh nagiging unhealthy na sa relationship natin'
+            },
+            {
+                src: '14.jpg',
+                title: '',
+                description: 'Pero despite all that'
+            },
+            {
+                src: '6.jpg',
+                title: '',
+                description: 'I never had any thought of giving up on us nor did I ever think of letting go of you'
+            },
+            {
+                src: '15.jpg',
+                title: '',
+                description: 'You became my strength'
+            },
+            {
+                src: '17.jpg',
+                title: '',
+                description: 'My daily dose of happiness'
+            },
+            {
+                src: '18.jpg',
+                title: '',
+                description: 'The one who makes me feel like I am home'
+            },
+            {
+                src: '22.jpg',
+                title: '',
+                description: 'The one who gave me the confidence'
+            },
+            {
+                src: '25.jpg',
+                title: '',
+                description: 'The one I can proudly say My Number 1 Fan'
+            },
+            {
+                src: '28.jpg',
+                title: '',
+                description: 'A reminder that giving up is not an option kasi para sayo ako bumabangon'
+            },
+            {
+                src: '23.jpg',
+                title: '',
+                description: 'You made the best out of me'
+            },
+            {
+                src: '10.jpg',
+                title: '',
+                description: 'You may not be perfect from your perspective but you are perfect for me.'
+            },
+            {
+                src: '19.jpg',
+                title: '',
+                description: 'You are always worth it, bebi. You are and you will always be.'
+            },
+            {
+                src: '27.jpg',
+                title: '',
+                description: 'I will love you till the day we both perish from this world. I may not be able to give you the best life but I promise I will give you the best life I can provide.'
+            },
+            {
+                src: '9.jpg',
+                title: '',
+                description: 'Happy monthsary, Bebi. May this love of ours continue to grow and flourish. And may our love be the guiding light that will lead us to our dreams. I am looking forward and excited for the many adventures we will have together. I love you, Bebi.'
+            }
+        ];
+
+        // Initialize welcome screen data
+        const defaultRecipient = 'My bebi, Luzel Grace';
+        const defaultMessage = 'This is my little monthsary gift to you, Bebi. Happy Monthsary. Hope you like it bebi';
+        const recipient = localStorage.getItem('recipientName') || defaultRecipient;
+        const welcomeText = localStorage.getItem('welcomeMessage') || defaultMessage;
+        localStorage.setItem('recipientName', recipient);
+        localStorage.setItem('welcomeMessage', welcomeText);
+        welcomeTitle.textContent = `Hello, ${recipient}!`;
+        welcomeMessage.textContent = welcomeText;
+
+        // Show album after welcome
+        continueBtn.addEventListener('click', () => {
+            welcomeContainer.style.display = 'none';
+            albumContainer.style.display = 'block';
+            isAudioPlaying = true;
+            toggleAudio.textContent = '▶';
+            audio.volume = volumeSlider.value;
+            audio.play().catch(e => console.log('Audio play failed:', e));
+            loadPhotos();
+        });
+
+        // Load photos with localStorage fallback
+        const loadPhotos = () => {
+            loadingSpinner.style.display = 'block';
+            try {
+                const storedPhotos = localStorage.getItem('albumPhotos');
+                if (storedPhotos) {
+                    const parsedPhotos = JSON.parse(storedPhotos);
+                    // Validate stored photos
+                    if (Array.isArray(parsedPhotos) && parsedPhotos.every(p => p.src && p.title && p.description)) {
+                        photos = parsedPhotos;
+                    } else {
+                        console.warn('Invalid photos in localStorage, resetting to default');
+                        photos = defaultPhotos;
+                        localStorage.setItem('albumPhotos', JSON.stringify(photos));
+                    }
+                } else {
+                    photos = defaultPhotos;
+                    localStorage.setItem('albumPhotos', JSON.stringify(photos));
+                }
+            } catch (e) {
+                console.error('Failed to load photos from localStorage:', e);
+                photos = defaultPhotos;
+                localStorage.setItem('albumPhotos', JSON.stringify(photos));
+            }
+            loadingSpinner.style.display = 'none';
+            updateAlbum();
+        };
+
+        // Add photo functionality
+        addPhotoBtn.addEventListener('click', () => {
+            addPhotoForm.style.display = 'flex';
+            addPhotoBtn.style.display = 'none';
+        });
+
+        submitPhoto.addEventListener('click', () => {
+            const src = photoSrc.value.trim();
+            const title = photoTitle.value.trim();
+            const description = photoDescription.value.trim();
+            if (src && title && description) {
+                photos.push({ src, title, description });
+                localStorage.setItem('albumPhotos', JSON.stringify(photos));
+                addPhotoForm.style.display = 'none';
+                addPhotoBtn.style.display = 'block';
+                photoSrc.value = '';
+                photoTitle.value = '';
+                photoDescription.value = '';
+                addPhotoError.style.display = 'none';
+                updateAlbum();
+            } else {
+                addPhotoError.style.display = 'block';
+            }
+        });
+
+        cancelPhoto.addEventListener('click', () => {
+            addPhotoForm.style.display = 'none';
+            addPhotoBtn.style.display = 'block';
+            photoSrc.value = '';
+            photoTitle.value = '';
+            photoDescription.value = '';
+            addPhotoError.style.display = 'none';
+            updateAlbum();
+        });
+
+        // PIN management
+        let correctPin = localStorage.getItem('albumPin') || '1234';
+        if (!localStorage.getItem('albumPin')) {
+            localStorage.setItem('albumPin', '1234');
+        }
+
+        submitPin.addEventListener('click', () => {
+            if (pinInput.value === correctPin) {
+                pinContainer.style.display = 'none';
+                welcomeContainer.style.display = 'block';
+                errorMessage.style.display = 'none';
+                pinInput.value = '';
+            } else {
+                errorMessage.style.display = 'block';
+                pinInput.value = '';
+            }
+        });
+
+        // PIN change functionality
+        changePinBtn.addEventListener('click', () => {
+            albumContainer.style.display = 'none';
+            pinContainer.style.display = 'block';
+            pinChangeContainer.style.display = 'block';
+            pinInput.style.display = 'none';
+            submitPin.style.display = 'none';
+            errorMessage.style.display = 'none';
+        });
+
+        submitNewPin.addEventListener('click', () => {
+            const newPin = newPinInput.value;
+            if (/^\d{4}$/.test(newPin)) {
+                localStorage.setItem('albumPin', newPin);
+                correctPin = newPin;
+                pinChangeContainer.style.display = 'none';
+                pinContainer.style.display = 'none';
+                albumContainer.style.display = 'block';
+                newPinInput.value = '';
+            } else {
+                pinChangeMessage.style.display = 'block';
+            }
+        });
+
+        cancelNewPin.addEventListener('click', () => {
+            pinChangeContainer.style.display = 'none';
+            pinInput.style.display = 'block';
+            submitPin.style.display = 'block';
+            pinContainer.style.display = 'none';
+            albumContainer.style.display = 'block';
+            newPinInput.value = '';
+            pinChangeMessage.style.display = 'none';
+        });
+
+        // Navigation
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                lastDirection = '⬅';
+                updateAlbum();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < photos.length - 1) {
+                currentIndex++;
+                lastDirection = '➡';
+                updateAlbum();
+            }
+        });
+
+        // Audio controls
+        toggleAudio.addEventListener('click', () => {
+            if (isAudioPlaying) {
+                audio.pause();
+                toggleAudio.textContent = '▶';
+            } else {
+                audio.play().catch(e => console.log('Audio play failed:', e));
+                toggleAudio.textContent = '⏸';
+            }
+            isAudioPlaying = !isAudioPlaying;
+        });
+
+        volumeSlider.addEventListener('input', () => {
+            audio.volume = volumeSlider.value;
+        });
+
+        function updateAlbum() {
+            if (photos.length === 0) {
+                imageTitle.textContent = 'No Photos Available';
+                imageDescription.textContent = 'Add a photo using Google Drive link';
+                currentImage.src = 'https://picsum.photos/400/300';
+                progress.textContent = '0 / 0';
+                return;
+            }
+            currentImage.classList.remove('slide-left', 'slide-right');
+            setTimeout(() => {
+                const src = photos[currentIndex].src;
+                if (!src) {
+                    console.error('Invalid image src at index:', currentIndex);
+                    currentImage.src = 'https://picsum.photos/400/300';
+                } else {
+                    currentImage.src = src;
+                }
+                imageTitle.textContent = photos[currentIndex].title;
+                imageDescription.textContent = photos[currentIndex].description;
+                currentImage.classList.add(lastDirection === 'right' ? 'slide-right' : 'slide-left');
+            }, 100);
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === photos.length - 1;
+            progress.textContent = `${currentIndex + 1} / ${photos.length}`;
+        }
+
+        // Handle Enter key for PIN submission
+        pinInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitPin.click();
+            }
+        });
+
+        newPinInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitNewPin.click();
+            }
+        });
+
+        photoSrc.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitPhoto.click();
+            }
+        });
+    </script>
+</body>
+</html>
