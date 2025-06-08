@@ -637,9 +637,9 @@
         });
 
         // PIN management
-        let correctPin = localStorage.getItem('albumPin') || '1234';
+        let correctPin = localStorage.getItem('albumPin') || '0909';
         if (!localStorage.getItem('albumPin')) {
-            localStorage.setItem('albumPin', '1234');
+            localStorage.setItem('albumPin', '0909');
         }
 
         submitPin.addEventListener('click', () => {
